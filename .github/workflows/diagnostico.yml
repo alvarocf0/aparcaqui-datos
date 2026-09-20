@@ -1,0 +1,15 @@
+name: Diagnóstico de conexión
+on: workflow_dispatch
+jobs:
+  probar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Conexión a trafico.sevilla.org
+        run: |
+          echo "IP/país del runner: $(curl -s --max-time 10 https://ipinfo.io/json | tr -d '\n ' | cut -c1-200)"
+          getent hosts trafico.sevilla.org || echo "DNS: sin respuesta"
+          for url in https://trafico.sevilla.org/datos/aparcamientos.xml http://trafico.sevilla.org/datos/aparcamientos.xml https://www.sevilla.org/; do
+            echo "== $url"
+            curl -sS -o /dev/null -w "codigo=%{http_code} conexion=%{time_connect}s total=%{time_total}s\n" --connect-timeout 15 --max-time 25 "$url" || true
+          done
