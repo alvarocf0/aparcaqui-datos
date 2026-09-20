@@ -1,0 +1,37 @@
+name: Recolectar datos de Sevilla
+
+on:
+  schedule:
+    # Cada hora (minuto 2). GitHub puede retrasar los cron unos minutos: el bucle lo compensa.
+    - cron: "2 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: recolector
+  cancel-in-progress: false
+
+jobs:
+  recolectar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Recolectar (una lectura cada 5 minutos durante ~55 minutos)
+        run: python3 recolector.py --salida datos --iteraciones 12 --intervalo 300 --duracion-max 3300
+
+      - name: Guardar datos en el repositorio
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add datos
+          if git diff --cached --quiet; then
+            echo "Sin datos nuevos"
+            exit 0
+          fi
+          git commit -m "Datos $(date -u +'%Y-%m-%dT%H:%MZ')"
+          git pull --rebase
+          git push
